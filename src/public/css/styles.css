@@ -18,3 +18,8 @@ li {
   padding: 10px;
   color: rgb(70, 165, 255);
 }
+
+a {
+  background-color: white;
+  padding: 2px;
+}

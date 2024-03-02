@@ -122,6 +122,8 @@ app.post("/carts/:idCarrito/productos/:idProducto", async (req, res) => {
 // Ruta para mostrar un carrito
 app.get('/carts/:id', async (req, res) => {
   try {
+    const marca = req.query.marca || ''; // Marca para filtrar, si no se proporciona, será una cadena vacía
+    const orden = req.query.orden || 'asc'; // Orden por precio, si no se proporciona, será ascendente
     const id = req.params.id;
     const carrito = await searchCartsPorId(id);
     if (!carrito) {
@@ -129,13 +131,13 @@ app.get('/carts/:id', async (req, res) => {
     }
     const productosEnCarrito = [];
     for (const idProducto of carrito.ids) {
-      const producto = await searchProductsPorId(idProducto);
+      const producto = await searchProductsPorId(idProducto, marca, orden);
       if (producto) {
         productosEnCarrito.push(producto[0]);
       }
     }
     console.log(productosEnCarrito)
-    res.render("cart", { title: "Carrito de Compras", carrito: productosEnCarrito });
+    res.render("cart", { title: "Carrito de Compras", carrito: productosEnCarrito , marca: marca, orden: orden });
   } catch (error) {
     console.error(error);
     res.status(500).send("Error interno del servidor");
@@ -192,34 +194,41 @@ const searchProducts = async (page = 1, limit = 10, marca = '', orden = 'asc') =
   };
 };
 
-const searchProductsPorId = async (idProducto) => {
+const searchProductsPorId = async (idProducto, marca = '', orden = 'asc') => {
   try {
-    const producto = await Product.findOne({ id: idProducto });
-    if (!producto) {
-      console.error(`No se encontró un producto con id ${idProducto}.`);
+    let filtro = { id: idProducto };
+    if (marca) {
+      filtro.marca = marca;
+    }
+
+    const productos = await Product.find(filtro).sort({ precio: orden });
+    if (!productos.length) {
+      console.error(`No se encontró ningún producto con id ${idProducto}.`);
       return null;
     }
 
-    console.log("Producto encontrado:");
+    console.log("Productos encontrados:");
 
-    // Convertir el producto a un objeto JavaScript
-    const productoJS = {
-      id: producto.id,
-      titulo: producto.titulo,
-      descripcion: producto.descripcion,
-      code: producto.code,
-      precio: producto.precio,
-      estado: producto.estado,
-      cantidad: producto.cantidad,
-      marca: producto.marca,
-      categoria: producto.categoria,
-      demografia: producto.demografia,
-      imagen: producto.imagen
-    };
+    // Convertir los productos a un array de objetos JavaScript
+    const productosJS = productos.map(producto => {
+      return {
+        id: producto.id,
+        titulo: producto.titulo,
+        descripcion: producto.descripcion,
+        code: producto.code,
+        precio: producto.precio,
+        estado: producto.estado,
+        cantidad: producto.cantidad,
+        marca: producto.marca,
+        categoria: producto.categoria,
+        demografia: producto.demografia,
+        imagen: producto.imagen
+      };
+    });
 
-    return [productoJS];
+    return productosJS;
   } catch (error) {
-    console.error(`Error al buscar el producto: ${error.message}`);
+    console.error(`Error al buscar los productos: ${error.message}`);
     return null;
   }
 };
