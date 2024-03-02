@@ -145,6 +145,38 @@ app.get('/carts/:id', async (req, res) => {
 });
 
 
+app.put('/api/carts/:cid/products/:pid', async (req, res) => {
+  try {
+    const { cid, pid } = req.params;
+    const { cantidad } = req.body;
+
+    // Validar que la cantidad sea un número positivo
+    if (!cantidad || isNaN(cantidad) || cantidad <= 0) {
+      return res.status(400).json({ error: 'La cantidad debe ser un número positivo.' });
+    }
+
+    // Obtener el carrito por su id
+    let carrito = await Carts.findOne({ id: cid });
+    if (!carrito) {
+      return res.status(404).json({ error: `No se encontró un carrito con id ${cid}.` });
+    }
+
+    // Verificar si el producto está en el carrito
+    const productoEnCarrito = carrito.products.find(prod => prod.id === pid);
+    if (!productoEnCarrito) {
+      return res.status(404).json({ error: `El producto con id ${pid} no está en el carrito.` });
+    }
+
+    // Actualizar la cantidad del producto en el carrito
+    productoEnCarrito.cantidad = cantidad;
+    await carrito.save();
+
+    return res.status(200).json({ message: `Cantidad del producto con id ${pid} actualizada en el carrito con id ${cid}.` });
+  } catch (error) {
+    console.error(`Error al actualizar la cantidad del producto en el carrito: ${error.message}`);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
 
 
 
